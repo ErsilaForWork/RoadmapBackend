@@ -12,24 +12,10 @@ import java.util.Optional;
 
 @Repository
 public interface GoalRepo extends JpaRepository<Goal, Long> {
-    @Query("""
-        select distinct g
-        from Goal g
-        left join fetch g.actions
-        where g.goalId = (
-            select a.goal.goalId
-            from Action a
-            where a.actionId = :actionId
-        )
-        """)
-    Optional<Goal> findGoalWithActionsByActionId(@Param("actionId") Long actionId);
 
     @Query("select g from Goal g where g.goalId = (select a.goal.goalId from Action a where a.actionId = :actionId)")
     @EntityGraph("goal_with_actions")
     Optional<Goal> findGoalWithActionsByActionIdGraph(@Param("actionId") Long actionId);
-
-    @Query("select distinct g from Goal g left join fetch g.actions where g.roadmap.roadmapId = :roadmapId order by g.goalId")
-    List<Goal> findGoalsWithActionsByRoadmapId(@Param("roadmapId") Long roadmapId);
 
     @Query("select g from Goal g where g.roadmap.roadmapId = :roadmapId order by g.goalId")
     @EntityGraph("goal_with_actions")

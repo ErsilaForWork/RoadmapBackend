@@ -7,12 +7,10 @@ import ers.roadmap.model.enums.Status;
 import ers.roadmap.security.model.AppUser;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import org.hibernate.annotations.BatchSize;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(

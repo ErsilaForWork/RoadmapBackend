@@ -2,7 +2,9 @@ package ers.roadmap.security.service;
 
 import ers.roadmap.DTO.LoginForm;
 import ers.roadmap.DTO.RegistrationForm;
+import ers.roadmap.DTO.VerifyUserDTO;
 import ers.roadmap.exceptions.LoginFormException;
+import ers.roadmap.exceptions.VerifyEmailException;
 import ers.roadmap.jwt.JwtUtils;
 import ers.roadmap.model.CustomMessage;
 import ers.roadmap.security.model.AppRole;
@@ -20,7 +22,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class AppUserService {
@@ -55,7 +60,7 @@ public class AppUserService {
 
     //Creates and saves user in the DB, and returns generated JWT token;
     @Transactional
-    public String createAndSaveUserJWT(RegistrationForm registrationForm) throws LoginFormException {
+    public AppUser createUser(RegistrationForm registrationForm) throws LoginFormException {
 
         //Throws LoginFormException if unique constraints are not respected
         checkForUniqueConstraintsRegistrationForm(registrationForm);
@@ -64,12 +69,16 @@ public class AppUserService {
         try{
             AppUser user = new AppUser(registrationForm, ROLE_USER);
             user.setPassword(encoder.encode(user.getPassword()));
-            userRepo.save(user);
-            return jwtUtils.generateTokenFromUsername(user.getUsername());
+            user.setVerificationCode(generateVerificationCode());
+            user.setVerificationCodeExpires(LocalDateTime.now().plusMinutes(15));
+            user.setEnabled(false);
+
+            return user;
         }catch (DataIntegrityViolationException e) {
             throw new LoginFormException("User already exists");
         }
     }
+
 
     // Logs user in by returning JWT token if credentials are valid
     public String loginJwt(LoginForm loginForm) throws LoginFormException{
@@ -87,6 +96,10 @@ public class AppUserService {
         AppUser user = userRepo.findAppUserByUsername(loginForm.getUsername()).orElseThrow(
                 () -> new LoginFormException("Invalid username or password")
         );
+
+        if(!user.isEnabled()) {
+            throw new LoginFormException("Email is not verificated!");
+        }
 
         // If passwords dont match
         if(!encoder.matches(loginForm.getPassword(), user.getPassword())) {
@@ -127,5 +140,62 @@ public class AppUserService {
 
     public List<AppUser> getAllSimpleRepo() {
         return userRepo.findAll();
+    }
+
+    public String verifyUserAndGetJwt(VerifyUserDTO input) throws VerifyEmailException {
+
+        Optional<AppUser> userOptional = userRepo.findByEmail(input.getEmail());
+
+        if(userOptional.isEmpty()) {
+            throw new VerifyEmailException("No user found with email:"+input.getEmail());
+        }
+
+        AppUser user = userOptional.get();
+
+        if(user.isEnabled()) {
+            throw new VerifyEmailException("User already verified his email!");
+        }
+
+        if(LocalDateTime.now().isBefore(user.getVerificationCodeExpires())) {
+            if(input.getVerificationCode().equals(user.getVerificationCode())) {
+                user.setEnabled(true);
+                user.setVerificationCode(null);
+                user.setVerificationCodeExpires(null);
+
+                userRepo.save(user);
+
+                return jwtUtils.generateTokenFromUsername(user.getUsername());
+            }else {
+                throw new VerifyEmailException("Verification code is invalid!");
+            }
+        }else {
+            throw new VerifyEmailException("Verification Code Expired!");
+        }
+
+    }
+
+    public AppUser regenetrateVerificationCode(VerifyUserDTO input) throws VerifyEmailException {
+
+        Optional<AppUser> userOptional = userRepo.findByEmail(input.getEmail());
+
+        if(userOptional.isEmpty()) throw new VerifyEmailException("No user with such email!");
+
+        AppUser user = userOptional.get();
+
+        if(user.isEnabled()) throw new VerifyEmailException("User is already verified!");
+
+        user.setVerificationCode(generateVerificationCode());
+        user.setVerificationCodeExpires(LocalDateTime.now().plusMinutes(15));
+        return userRepo.save(user);
+    }
+
+    private String generateVerificationCode() {
+        Random random = new Random();
+        int code = random.nextInt(900000) + 100000;
+        return String.valueOf(code);
+    }
+
+    public void save(AppUser notVerifiedUser) {
+        userRepo.save(notVerifiedUser);
     }
 }

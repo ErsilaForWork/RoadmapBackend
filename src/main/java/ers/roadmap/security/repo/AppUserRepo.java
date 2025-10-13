@@ -26,4 +26,5 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
     @EntityGraph(attributePaths = {"roadmaps", "role"})
     List<AppUser> getAllWithRoadmap();
 
+    Optional<AppUser> findByEmail(String email);
 }

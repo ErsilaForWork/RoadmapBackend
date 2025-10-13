@@ -3,6 +3,7 @@ package ers.roadmap.controller;
 import ers.roadmap.DTO.mappers.RoadmapMapper;
 import ers.roadmap.service.GoalService;
 import ers.roadmap.service.RoadmapService;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 

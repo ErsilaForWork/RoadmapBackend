@@ -4,6 +4,7 @@ import ers.roadmap.DTO.RegistrationForm;
 import ers.roadmap.model.Roadmap;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -56,6 +57,12 @@ public class AppUser {
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "owner")
     private List<Roadmap> roadmaps;
 
+    private String verificationCode;
+
+    private LocalDateTime verificationCodeExpires;
+
+    private boolean enabled;
+
     public AppUser() {}
 
     public AppUser(String username, String email, String password, AppRole role) {
@@ -63,6 +70,15 @@ public class AppUser {
         this.email = email;
         this.password = password;
         this.role = role;
+        roadmaps = new ArrayList<>();
+    }
+
+    public AppUser(String username, String email, String password, AppRole role, boolean enabled) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.enabled = enabled;
         roadmaps = new ArrayList<>();
     }
 
@@ -176,5 +192,29 @@ public class AppUser {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getVerificationCode() {
+        return verificationCode;
+    }
+
+    public void setVerificationCode(String verificationCode) {
+        this.verificationCode = verificationCode;
+    }
+
+    public LocalDateTime getVerificationCodeExpires() {
+        return verificationCodeExpires;
+    }
+
+    public void setVerificationCodeExpires(LocalDateTime verificationCodeExpires) {
+        this.verificationCodeExpires = verificationCodeExpires;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

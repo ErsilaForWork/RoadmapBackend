@@ -11,6 +11,7 @@ import ers.roadmap.repo.ActionRepo;
 import ers.roadmap.repo.GoalRepo;
 import ers.roadmap.repo.RoadmapRepo;
 import ers.roadmap.security.model.AppUser;
+import org.hibernate.annotations.BatchSize;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
