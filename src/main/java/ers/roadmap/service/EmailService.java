@@ -2,45 +2,49 @@ package ers.roadmap.service;
 
 import ers.roadmap.exceptions.VerifyEmailException;
 import ers.roadmap.security.model.AppUser;
+import ers.roadmap.security.repo.AppUserRepo;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class EmailService {
 
     private final JavaMailSender emailSender;
+    private final AppUserRepo userRepo;
 
     @Value("${email}")
     private String appEmail;
 
-    public EmailService(JavaMailSender emailSender) {
+    public EmailService(JavaMailSender emailSender, AppUserRepo userRepo) {
         this.emailSender = emailSender;
+        this.userRepo = userRepo;
     }
 
     private void sendMessage(String to, String subject, String text) throws MessagingException {
 
         MimeMessage message = emailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
 
         helper.setFrom(appEmail);
         helper.setTo(to);
         helper.setSubject(subject);
-        helper.setText(text);
+        helper.setText(text, true);
 
         emailSender.send(message);
     }
 
-    public void sendMessage(AppUser notVerifiedUser) throws VerifyEmailException {
-
-        if(notVerifiedUser.isEnabled()) {
-            throw new VerifyEmailException("Email Already Verified!");
-        }
-
+    // В EmailService
+    @Async
+    public CompletableFuture<Void> sendMessageAsync(AppUser notVerifiedUser) {
         String subject = "Email verification";
+
         String verificationCode = notVerifiedUser.getVerificationCode();
 
         String htmlMessage = "<html>"
@@ -58,11 +62,16 @@ public class EmailService {
 
         try {
             sendMessage(notVerifiedUser.getEmail(), subject, htmlMessage);
-        }catch (MessagingException e) {
-            e.printStackTrace();
+        } catch (org.springframework.mail.MailException | jakarta.mail.MessagingException e) {
+            // логируем и корректно обрабатываем
+            System.out.println("Failed to send verification email to {}: {}" +  notVerifiedUser.getEmail() + e.getMessage());
+            userRepo.delete(notVerifiedUser);
+        } catch (Throwable t) {
+            System.out.println("Unexpected error while sending email to {}: {}" + notVerifiedUser.getEmail() + t.getMessage() + t);
         }
-
+        return CompletableFuture.completedFuture(null);
     }
+
 
 
 }

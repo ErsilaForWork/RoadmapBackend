@@ -3,7 +3,6 @@ package ers.roadmap.service;
 import ers.roadmap.DTO.model.input.RoadmapInput;
 import ers.roadmap.DTO.model.output.RoadmapDTO;
 import ers.roadmap.DTO.mappers.RoadmapMapper;
-import ers.roadmap.model.Action;
 import ers.roadmap.model.Goal;
 import ers.roadmap.model.Roadmap;
 import ers.roadmap.model.enums.Status;
@@ -11,12 +10,11 @@ import ers.roadmap.repo.ActionRepo;
 import ers.roadmap.repo.GoalRepo;
 import ers.roadmap.repo.RoadmapRepo;
 import ers.roadmap.security.model.AppUser;
-import org.hibernate.annotations.BatchSize;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 public class RoadmapService {
@@ -24,13 +22,11 @@ public class RoadmapService {
     private final RoadmapRepo roadmapRepo;
     private final RoadmapMapper roadmapMapper;
     private final GoalRepo goalRepo;
-    private final ActionRepo actionRepo;
 
     public RoadmapService(RoadmapRepo roadmapRepo, RoadmapMapper roadmapMapper, GoalRepo goalRepo, ActionRepo actionRepo) {
         this.roadmapRepo = roadmapRepo;
         this.roadmapMapper = roadmapMapper;
         this.goalRepo = goalRepo;
-        this.actionRepo = actionRepo;
     }
 
     public Roadmap save(Roadmap roadmap) {
@@ -46,6 +42,16 @@ public class RoadmapService {
         return roadmapRepo.save(roadmap);
     }
 
+    public boolean isOwner(String username, long roadmapId) {
+        Optional<Roadmap> optionalRoadmap = roadmapRepo.findRoadmapById(roadmapId);
+
+        if(optionalRoadmap.isEmpty()) return false;
+
+        Roadmap roadmap = optionalRoadmap.get();
+
+        return username.equals(roadmap.getOwner().getUsername());
+
+    }
 
     public Roadmap mapWithOwner(RoadmapInput roadmapDTO, AppUser owner) {
         Roadmap roadmap = roadmapMapper.toRoadmap(roadmapDTO);
@@ -59,22 +65,6 @@ public class RoadmapService {
                 .stream()
                 .map(roadmapMapper::toDTO)
                 .toList();
-    }
-
-    public boolean isOwner(String username, Long actionId) {
-
-        Action action;
-
-        try{
-            System.out.println("Queries to get action----------------------------");
-            action = actionRepo.findWithGoalAndRoadmap(actionId).get();
-            System.out.println("END to get action----------------------------");
-
-        }catch (NoSuchElementException e) {
-            return true;
-        }
-
-        return action.getGoal().getRoadmap().getOwner().getUsername().equals(username);
     }
 
     public List<RoadmapDTO> getAllEficient() {
@@ -158,5 +148,9 @@ public class RoadmapService {
                 .map(roadmapMapper::toDTO)
                 .toList();
 
+    }
+
+    public void deleteById(Long id) {
+        roadmapRepo.deleteById(id);
     }
 }

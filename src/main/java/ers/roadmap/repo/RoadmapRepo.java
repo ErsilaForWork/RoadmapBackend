@@ -21,4 +21,8 @@ public interface RoadmapRepo extends JpaRepository<Roadmap, Long> {
     List<Roadmap> getRoadmapsByOwner_Username(String ownerUsername);
 
     List<Roadmap> getRoadmapsByOwner_UsernameAndStatus(String ownerUsername, Status status);
+
+    @Query("select r from Roadmap r where r.roadmapId = :id")
+    @EntityGraph("roadmap_with_owner")
+    Optional<Roadmap> findRoadmapById(@Param("id") Long roadmapId);
 }

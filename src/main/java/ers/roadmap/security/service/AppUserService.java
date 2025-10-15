@@ -2,6 +2,7 @@ package ers.roadmap.security.service;
 
 import ers.roadmap.DTO.LoginForm;
 import ers.roadmap.DTO.RegistrationForm;
+import ers.roadmap.DTO.ResendEmailDTO;
 import ers.roadmap.DTO.VerifyUserDTO;
 import ers.roadmap.exceptions.LoginFormException;
 import ers.roadmap.exceptions.VerifyEmailException;
@@ -58,25 +59,16 @@ public class AppUserService {
 
     }
 
-    //Creates and saves user in the DB, and returns generated JWT token;
-    @Transactional
-    public AppUser createUser(RegistrationForm registrationForm) throws LoginFormException {
+    public AppUser createUser(RegistrationForm registrationForm) {
 
-        //Throws LoginFormException if unique constraints are not respected
-        checkForUniqueConstraintsRegistrationForm(registrationForm);
+        AppUser user = new AppUser(registrationForm, ROLE_USER);
+        user.setPassword(encoder.encode(user.getPassword()));
+        user.setVerificationCode(generateVerificationCode());
+        user.setVerificationCodeExpires(LocalDateTime.now().plusMinutes(15));
+        user.setEnabled(false);
 
-        //Race condition safety
-        try{
-            AppUser user = new AppUser(registrationForm, ROLE_USER);
-            user.setPassword(encoder.encode(user.getPassword()));
-            user.setVerificationCode(generateVerificationCode());
-            user.setVerificationCodeExpires(LocalDateTime.now().plusMinutes(15));
-            user.setEnabled(false);
+        return saveWithCheck(user);
 
-            return user;
-        }catch (DataIntegrityViolationException e) {
-            throw new LoginFormException("User already exists");
-        }
     }
 
 
@@ -107,18 +99,6 @@ public class AppUserService {
         }
     }
 
-    //Checks for unique constraints of Login Form
-    private void checkForUniqueConstraintsRegistrationForm(RegistrationForm registrationForm) throws LoginFormException {
-
-        if(userRepo.existsByUsername(registrationForm.getUsername())){
-            throw new LoginFormException("Username is already exists!");
-        }
-
-        if(userRepo.existsByEmail(registrationForm.getEmail())) {
-            throw new LoginFormException("Email is already used!");
-        }
-
-    }
 
     // To return Response Entity with correct cookies
     public ResponseEntity<?> setJwtToCookie(String jwt) {
@@ -174,7 +154,7 @@ public class AppUserService {
 
     }
 
-    public AppUser regenetrateVerificationCode(VerifyUserDTO input) throws VerifyEmailException {
+    public AppUser regenetrateVerificationCode(ResendEmailDTO input) throws VerifyEmailException {
 
         Optional<AppUser> userOptional = userRepo.findByEmail(input.getEmail());
 
@@ -197,5 +177,13 @@ public class AppUserService {
 
     public void save(AppUser notVerifiedUser) {
         userRepo.save(notVerifiedUser);
+    }
+
+    public AppUser saveWithCheck(AppUser notVerifiedUser) throws LoginFormException {
+        try{
+            return userRepo.save(notVerifiedUser);
+        }catch (DataIntegrityViolationException e) {
+            throw  new LoginFormException("User Already Exists");
+        }
     }
 }

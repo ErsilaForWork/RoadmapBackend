@@ -29,6 +29,12 @@ import java.util.Objects;
                 @NamedAttributeNode("owner")
         }
 )
+@NamedEntityGraph(
+        name = "roadmap_with_owner",
+        attributeNodes = {
+                @NamedAttributeNode("owner")
+        }
+)
 public class Roadmap {
 
     @Id

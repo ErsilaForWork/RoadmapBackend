@@ -38,6 +38,22 @@ public class ActionService {
         return validator.validateActionComplete(actionId);
     }
 
+    public boolean isOwner(String username, Long actionId) {
+
+        Action action;
+
+        try{
+            System.out.println("Queries to get action----------------------------");
+            action = actionRepo.findWithGoalAndRoadmap(actionId).get();
+            System.out.println("END to get action----------------------------");
+
+        }catch (NoSuchElementException e) {
+            return true;
+        }
+
+        return action.getGoal().getRoadmap().getOwner().getUsername().equals(username);
+    }
+
     @Transactional
     public void setActionCompleted(Action action, Goal goal, Roadmap roadmap) {
         //If our action is the last one in this goal

@@ -34,7 +34,7 @@ public class ActionController {
     }
 
 
-    @PreAuthorize("hasRole('ROLE_ADMIN') or @roadmapService.isOwner(authentication.name, #actionId)")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(authentication.name, #actionId)")
     @PutMapping("/complete/{id}")
     public ResponseEntity<?> complete(@PathVariable("id") Long actionId) {
 

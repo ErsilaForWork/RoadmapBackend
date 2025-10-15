@@ -1,9 +1,6 @@
 package ers.roadmap.controller;
 
-import ers.roadmap.DTO.AppUserDTO;
-import ers.roadmap.DTO.LoginForm;
-import ers.roadmap.DTO.RegistrationForm;
-import ers.roadmap.DTO.VerifyUserDTO;
+import ers.roadmap.DTO.*;
 import ers.roadmap.DTO.mappers.AppUserMapper;
 import ers.roadmap.exceptions.LoginFormException;
 import ers.roadmap.exceptions.VerifyEmailException;
@@ -40,28 +37,30 @@ public class SecurityController {
 
     @PostMapping("/public/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegistrationForm registrationForm, BindingResult br) {
+        long t0 = System.currentTimeMillis();
 
-        System.out.println("User " + registrationForm.getUsername() + " try to register");
-
-        if(br.hasErrors()) {
-            System.out.println("User " + registrationForm.getUsername() + " had bad registration form");
+        if (br.hasErrors()) {
             return new ResponseEntity<>(new CustomMessage("Incorrect registration form"), HttpStatus.BAD_REQUEST);
         }
 
-        try{
+        try {
+            long t1 = System.currentTimeMillis();
             AppUser notVerifiedUser = userService.createUser(registrationForm);
-            System.out.println("User " + notVerifiedUser.getUsername() + " successfully created");
-            emailService.sendMessage(notVerifiedUser);
-            System.out.println("Message to verify user " + notVerifiedUser.getUsername() + " is sent!");
-            userService.save(notVerifiedUser);
-            System.out.println("User " + notVerifiedUser.getUsername() + " is saved to DB");
-            return new ResponseEntity<>(new CustomMessage("Now verify your email;"), HttpStatus.CREATED);
+            long t2 = System.currentTimeMillis();
+            System.out.println("createUser time: " + (t2 - t1) + " ms");
 
-        }catch (LoginFormException e) {
-            System.out.println("User " + registrationForm.getUsername() + " already exists");
+            // Измерим отправку письма отдельно
+            long t3 = System.currentTimeMillis();
+            emailService.sendMessageAsync(notVerifiedUser);
+            long t4 = System.currentTimeMillis();
+            System.out.println("sendMessage time: " + (t4 - t3) + " ms");
+
+            System.out.println("total: " + (t4 - t0) + " ms");
+            return new ResponseEntity<>(new CustomMessage("Verification code is sent, if email exists"), HttpStatus.CREATED);
+
+        } catch (LoginFormException e) {
             return new ResponseEntity<>(new CustomMessage(e.getMessage()), HttpStatus.CONFLICT);
         }
-
     }
 
     @PostMapping("/public/logout")
@@ -98,13 +97,13 @@ public class SecurityController {
     }
 
     @PostMapping("/public/verification-code")
-    public ResponseEntity<?> resendCode(@RequestBody VerifyUserDTO input) {
+    public ResponseEntity<?> resendCode(@RequestBody ResendEmailDTO input) {
 
         System.out.println("User with email : " + input.getEmail() + " is trying to resend the verification code");
 
         try {
             AppUser notVerifiedUser = userService.regenetrateVerificationCode(input);
-            emailService.sendMessage(notVerifiedUser);
+            emailService.sendMessageAsync(notVerifiedUser);
             return new ResponseEntity<>(new CustomMessage("Verification code sent!"), HttpStatus.OK);
         }catch (VerifyEmailException e) {
             System.out.println("Something went wrong while trying to resend verification code to " + input.getEmail());

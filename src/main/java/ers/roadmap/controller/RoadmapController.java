@@ -13,6 +13,7 @@ import ers.roadmap.service.RoadmapService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -26,12 +27,12 @@ public class RoadmapController {
 
     private final RoadmapService roadmapService;
     private final AppUserService userService;
-    private final GoalService goalService;
+    private final RoadmapMapper roadmapMapper;
 
-    public RoadmapController(RoadmapService roadmapService, AppUserService userService, RoadmapMapper roadmapMapper, GoalService goalService) {
+    public RoadmapController(RoadmapService roadmapService, AppUserService userService, RoadmapMapper roadmapMapper) {
         this.roadmapService = roadmapService;
         this.userService = userService;
-        this.goalService = goalService;
+        this.roadmapMapper = roadmapMapper;
     }
 
 
@@ -56,7 +57,7 @@ public class RoadmapController {
         }
 
         Roadmap roadmap = roadmapService.mapWithOwner(roadmapDTO, owner);
-        return new ResponseEntity<>(roadmapService.save(roadmap), HttpStatus.OK);
+        return new ResponseEntity<>(roadmapMapper.toDTO(roadmapService.save(roadmap)), HttpStatus.OK);
 
     }
 
@@ -78,6 +79,13 @@ public class RoadmapController {
     @GetMapping("/roadmaps")
     public List<RoadmapDTO> getAll() {
         return roadmapService.getAllEficient();
+    }
+
+    @PreAuthorize("hasRole('ROLE_ADMIN') or @roadmapService.isOwner(authentication.name, #id)")
+    @DeleteMapping("/roadmap/{id}")
+    public ResponseEntity<?> deleteRoadmap(@PathVariable("id") Long id) {
+        roadmapService.deleteById(id);
+        return new ResponseEntity<>(new CustomMessage("Succesfully deleted"), HttpStatus.OK);
     }
 
 }

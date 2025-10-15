@@ -25,6 +25,8 @@ public class EmailConfiguration {
         mailSender.setHost("smtp.inbox.ru");
         mailSender.setPort(587);
         mailSender.setUsername(email);
+        mailSender.setDefaultEncoding("UTF-8");
+
 
         System.out.println(email);
         mailSender.setPassword(password);
