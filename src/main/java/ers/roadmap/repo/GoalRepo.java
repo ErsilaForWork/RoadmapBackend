@@ -24,4 +24,6 @@ public interface GoalRepo extends JpaRepository<Goal, Long> {
     @Query("SELECT g FROM Goal g where g.roadmap.roadmapId = :roadmapId ORDER BY g.goalId")
     @EntityGraph("goal_with_actions")
     List<Goal> findGoalsWithActionsUsingRoadmapId(@Param("roadmapId") Long roadmapId);
+
+    boolean existsByGoalIdAndRoadmap_Owner_Username(Long goalId, String roadmapOwnerUsername);
 }

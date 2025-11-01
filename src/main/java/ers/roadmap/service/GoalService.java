@@ -1,27 +1,34 @@
 package ers.roadmap.service;
 
+import ers.roadmap.DTO.patch.PatchGoalDTO;
+import ers.roadmap.DTO.patch.mapper.PatchGoalMapper;
+import ers.roadmap.exceptions.ConstraintsNotMetException;
 import ers.roadmap.model.Goal;
 import ers.roadmap.model.Roadmap;
 import ers.roadmap.model.enums.Status;
 import ers.roadmap.repo.GoalRepo;
 import ers.roadmap.repo.RoadmapRepo;
+import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 public class GoalService {
 
-    private final RoadmapRepo roadmapRepo;
     private final RoadmapService roadmapService;
     private final GoalRepo goalRepo;
     private final Validator validator;
+    private final PatchGoalMapper goalMapper;
 
-    public GoalService(RoadmapRepo roadmapRepo, RoadmapService roadmapService, GoalRepo goalRepo, Validator validator) {
-        this.roadmapRepo = roadmapRepo;
+    public GoalService(RoadmapService roadmapService, GoalRepo goalRepo, Validator validator, PatchGoalMapper goalMapper) {
         this.roadmapService = roadmapService;
         this.goalRepo = goalRepo;
         this.validator = validator;
+        this.goalMapper = goalMapper;
     }
 
     public void setGoalCompleted(Goal goal, Roadmap roadmap) {
@@ -73,5 +80,26 @@ public class GoalService {
 
     public Goal findGoalWithActionsByActionId(Long actionId) {
         return goalRepo.findGoalWithActionsByActionIdGraph(actionId).get();
+    }
+
+    public boolean isOwner(String username, Long goalId) {
+        return goalRepo.existsByGoalIdAndRoadmap_Owner_Username(goalId, username);
+    }
+
+    public void partialUpdate(Long goalId, PatchGoalDTO goalDTO) throws ConstraintsNotMetException {
+
+        Optional<Goal> optionalGoal = goalRepo.findById(goalId);
+
+        if(optionalGoal.isEmpty()) throw new NoSuchElementException("No such goals with this goalId");
+
+        Goal goal = optionalGoal.get();
+
+        goalMapper.merge(goal, goalDTO);
+
+        try{
+            goalRepo.save(goal);
+        }catch (DataIntegrityViolationException e) {
+            throw new ConstraintsNotMetException("Unable to save the entity");
+        }
     }
 }

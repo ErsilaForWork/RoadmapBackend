@@ -1,6 +1,8 @@
 package ers.roadmap.controller;
 
 import ers.roadmap.DTO.mappers.RoadmapMapper;
+import ers.roadmap.DTO.patch.PatchActionDTO;
+import ers.roadmap.exceptions.ConstraintsNotMetException;
 import ers.roadmap.model.Action;
 import ers.roadmap.model.CustomMessage;
 import ers.roadmap.model.Goal;
@@ -8,10 +10,12 @@ import ers.roadmap.model.Roadmap;
 import ers.roadmap.service.ActionService;
 import ers.roadmap.service.GoalService;
 import ers.roadmap.service.RoadmapService;
+import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +37,26 @@ public class ActionController {
         this.roadmapMapper = roadmapMapper;
     }
 
+
+    @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(authentication.name, #actionId)")
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> partialUpdate(@Valid @RequestBody PatchActionDTO actionDTO, BindingResult br, @PathVariable("id") Long actionId) {
+
+        if(br.hasErrors()) {
+            return new ResponseEntity<>(new CustomMessage("Bad request body!"), HttpStatus.BAD_REQUEST);
+        }
+
+        try{
+            actionService.partialUpdate(actionId, actionDTO);
+        }catch (NoSuchElementException e) {
+            return new ResponseEntity<>(new CustomMessage(e.getMessage()),HttpStatus.BAD_REQUEST);
+        }catch (ConstraintsNotMetException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
+
+    }
 
     @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(authentication.name, #actionId)")
     @PutMapping("/complete/{id}")

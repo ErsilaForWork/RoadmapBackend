@@ -3,13 +3,17 @@ package ers.roadmap.service;
 import ers.roadmap.DTO.model.input.RoadmapInput;
 import ers.roadmap.DTO.model.output.RoadmapDTO;
 import ers.roadmap.DTO.mappers.RoadmapMapper;
+import ers.roadmap.DTO.patch.PatchRoadmapDTO;
+import ers.roadmap.DTO.patch.mapper.PatchRoadmapMapper;
+import ers.roadmap.exceptions.ConstraintsNotMetException;
 import ers.roadmap.model.Goal;
 import ers.roadmap.model.Roadmap;
 import ers.roadmap.model.enums.Status;
-import ers.roadmap.repo.ActionRepo;
 import ers.roadmap.repo.GoalRepo;
 import ers.roadmap.repo.RoadmapRepo;
 import ers.roadmap.security.model.AppUser;
+import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,12 +25,14 @@ public class RoadmapService {
 
     private final RoadmapRepo roadmapRepo;
     private final RoadmapMapper roadmapMapper;
+    private final PatchRoadmapMapper roadmapPatchMapper;
     private final GoalRepo goalRepo;
 
-    public RoadmapService(RoadmapRepo roadmapRepo, RoadmapMapper roadmapMapper, GoalRepo goalRepo, ActionRepo actionRepo) {
+    public RoadmapService(RoadmapRepo roadmapRepo, RoadmapMapper roadmapMapper, GoalRepo goalRepo, PatchRoadmapMapper roadmapPatchMapper) {
         this.roadmapRepo = roadmapRepo;
         this.roadmapMapper = roadmapMapper;
         this.goalRepo = goalRepo;
+        this.roadmapPatchMapper = roadmapPatchMapper;
     }
 
     public Roadmap save(Roadmap roadmap) {
@@ -153,4 +159,20 @@ public class RoadmapService {
     public void deleteById(Long id) {
         roadmapRepo.deleteById(id);
     }
+
+
+    public void partialUpdate(Long roadmapId, @Valid PatchRoadmapDTO patchDTO) throws ConstraintsNotMetException {
+
+        Roadmap roadmap = roadmapRepo.getRoadmapByRoadmapId(roadmapId);
+
+        roadmapPatchMapper.merge(roadmap, patchDTO);
+
+        try {
+            roadmapRepo.save(roadmap);
+        }catch (DataIntegrityViolationException e) {
+            throw new ConstraintsNotMetException(e.getMessage());
+        }
+
+    }
+
 }
