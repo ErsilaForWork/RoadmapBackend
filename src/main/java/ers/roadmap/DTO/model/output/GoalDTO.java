@@ -18,12 +18,22 @@ public class GoalDTO {
     @NotBlank
     private String title;
 
+    private Long position;
+
     @JsonBackReference
     private RoadmapDTO roadmap;
 
     @JsonManagedReference
     private List<ActionDTO> actions;
 
+
+    public Long getPosition() {
+        return position;
+    }
+
+    public void setPosition(Long position) {
+        this.position = position;
+    }
 
     public Long getGoalId() {
         return goalId;

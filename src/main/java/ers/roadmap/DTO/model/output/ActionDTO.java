@@ -13,6 +13,8 @@ public class ActionDTO {
     @NotBlank
     private String title;
 
+    private Long position;
+
     private String description;
 
     @JsonBackReference
@@ -20,6 +22,14 @@ public class ActionDTO {
 
     public Long getActionId() {
         return actionId;
+    }
+
+    public Long getPosition() {
+        return position;
+    }
+
+    public void setPosition(Long position) {
+        this.position = position;
     }
 
     public void setActionId(Long actionId) {

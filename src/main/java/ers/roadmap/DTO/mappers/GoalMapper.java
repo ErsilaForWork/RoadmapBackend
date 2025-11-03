@@ -25,6 +25,7 @@ public class GoalMapper {
         goalDTO.setStatus(goal.getStatus());
         goalDTO.setTitle(goal.getTitle());
         goalDTO.setCompletedPercent(goal.getCompletedPercent());
+        goalDTO.setPosition(goal.getPosition());
         goalDTO.setActions(goal.getActions().stream().map(ActionMapper::toDTO).toList());
 
         return goalDTO;

@@ -36,15 +36,6 @@ public class RoadmapService {
     }
 
     public Roadmap save(Roadmap roadmap) {
-
-        if(roadmap.getNowWorkingGoal() == null) {
-            Goal nowWorkingGoal = roadmap.getGoals().getFirst();
-            if(nowWorkingGoal.getNowWorkingAction() == null) {
-                nowWorkingGoal.setNowWorkingAction(nowWorkingGoal.getActions().getFirst());
-            }
-            roadmap.setNowWorkingGoal(nowWorkingGoal);
-        }
-
         return roadmapRepo.save(roadmap);
     }
 

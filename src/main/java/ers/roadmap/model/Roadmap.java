@@ -60,7 +60,7 @@ public class Roadmap {
 
     @JsonManagedReference
     @OneToMany(mappedBy = "roadmap", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @OrderBy("goalId ASC")
+    @OrderBy("position ASC")
     private List<Goal> goals;
 
     @ManyToOne(fetch = FetchType.EAGER)

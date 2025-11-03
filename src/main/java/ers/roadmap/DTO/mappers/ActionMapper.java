@@ -27,6 +27,7 @@ public class ActionMapper {
         actionDTO.setStatus(action.getStatus());
         actionDTO.setTitle(action.getTitle());
         actionDTO.setDescription(action.getDescription());
+        actionDTO.setPosition(action.getPosition());
 
         return actionDTO;
 

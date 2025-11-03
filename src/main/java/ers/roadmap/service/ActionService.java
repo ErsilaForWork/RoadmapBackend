@@ -1,17 +1,18 @@
 package ers.roadmap.service;
 
-import ers.roadmap.DTO.mappers.GoalMapper;
 import ers.roadmap.DTO.mappers.RoadmapMapper;
 import ers.roadmap.DTO.patch.PatchActionDTO;
+import ers.roadmap.DTO.patch.PatchPositionDTO;
 import ers.roadmap.DTO.patch.mapper.PatchActionMapper;
 import ers.roadmap.exceptions.ConstraintsNotMetException;
+import ers.roadmap.exceptions.UnableToMoveExeption;
 import ers.roadmap.model.Action;
 import ers.roadmap.model.Goal;
 import ers.roadmap.model.Roadmap;
 import ers.roadmap.model.enums.Status;
 import ers.roadmap.repo.ActionRepo;
 import ers.roadmap.repo.GoalRepo;
-import ers.roadmap.repo.RoadmapRepo;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
@@ -28,12 +29,16 @@ public class ActionService {
     private final Validator validator;
     private final GoalService goalService;
     private final PatchActionMapper actionMapper;
+    private final GoalRepo goalRepo;
+    private final EntityManager entityManager;
 
-    public ActionService(ActionRepo actionRepo, Validator validator, GoalService goalService, PatchActionMapper actionMapper) {
+    public ActionService(ActionRepo actionRepo, Validator validator, GoalService goalService, PatchActionMapper actionMapper, GoalRepo goalRepo, EntityManager entityManager) {
         this.actionRepo = actionRepo;
         this.validator = validator;
         this.goalService = goalService;
         this.actionMapper = actionMapper;
+        this.goalRepo = goalRepo;
+        this.entityManager = entityManager;
     }
 
     public Action validateToComplete(Long actionId) throws NoSuchElementException, ValidationException {
@@ -88,4 +93,162 @@ public class ActionService {
         }
 
     }
+
+    //This method must come only after validateToMove() method!!!!!!!!!!!!!!!!!!!!!!
+    @Transactional
+    public void move(Long actionId, PatchPositionDTO dto) {
+        // 1. Захватить movingAction с блокировкой
+        Action moving = actionRepo.findByIdForUpdate(actionId).get();
+
+        Long goalId = moving.getGoal().getGoalId();
+
+        Action prev = null;
+        Action next = null;
+
+        if (dto.getPrevId() != null) {
+            prev = actionRepo.findByIdForUpdate(dto.getPrevId()).get();
+        }
+        if (dto.getNextId() != null) {
+            next = actionRepo.findByIdForUpdate(dto.getNextId()).get();
+        }
+
+        if(moving.getStatus() == Status.NOW_WORKING) {
+            setNowWorkingToNextAction(moving);
+        }
+
+        long newPos;
+
+        // moving to beginning
+        if (prev == null && next != null) {
+            // попытка взять середину: next.position / 2
+            newPos = next.getPosition() / 2;
+            if (newPos == next.getPosition() || newPos == 0) {
+                // gap недостаточен -> реиндекс и перерасчёт
+                actionRepo.reindexActionsByGoal(goalId, RoadmapMapper.POSITION_STEP);
+                entityManager.refresh(next);
+                next = actionRepo.findByIdForUpdate(dto.getNextId()).get();
+                newPos = next.getPosition() / 2;
+            }
+            setNowWorkingToMoving(moving, next);
+        }
+        // moving to end
+        else if (next == null && prev != null) {
+            newPos = prev.getPosition() + RoadmapMapper.POSITION_STEP;
+            // в конце обычно не нужен reindex
+        }
+        // moving to middle
+        else if (prev != null && next != null) {
+            long gap = next.getPosition() - prev.getPosition();
+            if (gap <= 1) {
+                System.out.println("Gap is: " + gap);
+                System.out.println("Before reindex: ");
+                System.out.println("Prev position: " + prev.getPosition());
+                System.out.println("Next position: " + next.getPosition());
+
+                // недостаточный gap -> реиндекс, затем перезагрузить соседей
+                actionRepo.reindexActionsByGoal(goalId, RoadmapMapper.POSITION_STEP);
+                entityManager.refresh(next);
+                entityManager.refresh(prev);
+                prev = actionRepo.findByIdForUpdate(dto.getPrevId()).get();
+                next = actionRepo.findByIdForUpdate(dto.getNextId()).get();
+                gap = next.getPosition() - prev.getPosition();
+
+                System.out.println("After reindex: ");
+                System.out.println("Gap is: " + gap);
+                System.out.println("Prev position: " + prev.getPosition());
+                System.out.println("Next position: " + next.getPosition());
+
+                // после ребаланса gap должен быть >= POSITION_STEP, но на всякий случай:
+                if (gap <= 1) {
+                    // безопасный fallback: поставить сразу после prev
+                    newPos = prev.getPosition() + 1;
+                } else {
+                    newPos = prev.getPosition() + gap / 2;
+                }
+            } else {
+                newPos = prev.getPosition() + gap / 2;
+            }
+
+            if(prev.getStatus() == Status.COMPLETED) {
+                setNowWorkingToMoving(moving, next);
+            }
+
+        } else {
+            // нет prev и next — единственный элемент в списке
+            newPos = RoadmapMapper.POSITION_STEP;
+        }
+
+        System.out.println("Actions new position is: " + newPos);
+
+        // Установить позицию и сохранить
+        moving.setPosition(newPos);
+        actionRepo.save(moving);
+    }
+
+    //Checks if the previous Action and NextAction are completed
+    public void validateToMove(Long actionId, PatchPositionDTO actionPositionDTO) throws NoSuchElementException, UnableToMoveExeption {
+
+        // If the moving action is not exists
+        if(!actionRepo.existsById(actionId)) throw new NoSuchElementException("No such action with id: " + actionId);
+
+        //If the moving action is already completed
+        if(actionRepo.existsByActionIdAndStatus(actionId, Status.COMPLETED)) throw new UnableToMoveExeption("Unable to move completed action!");
+
+        //If the JSON is empty
+        if(actionPositionDTO.getPrevId() == null && actionPositionDTO.getNextId() == null) throw new NoSuchElementException("Both previous and next ids are empty!");
+
+        //If user wants to move action to the beginning
+        if(actionPositionDTO.getPrevId() == null) {
+
+            if(!actionRepo.existsById(actionPositionDTO.getNextId())) throw new NoSuchElementException("No such action with id: " + actionPositionDTO.getNextId());
+
+            if(actionRepo.existsByActionIdAndStatus(actionPositionDTO.getNextId(), Status.COMPLETED)) {
+                throw new UnableToMoveExeption("Unable to move the beginning, next action is already completed!");
+            }
+        }
+        //If user wants to move action to the end
+        else if(actionPositionDTO.getNextId() == null) {
+            if(!actionRepo.existsById(actionPositionDTO.getPrevId())) throw new NoSuchElementException("No such action with id: " + actionPositionDTO.getPrevId());
+        }
+        //If user wants to move action to the middle
+        else {
+            if(!actionRepo.existsById(actionPositionDTO.getNextId()) || !actionRepo.existsById(actionPositionDTO.getPrevId())) throw new NoSuchElementException("No such action with id: " + actionPositionDTO.getNextId() + " or " + actionPositionDTO.getPrevId());
+
+            //If the status of nextId is Completed
+            if(actionRepo.existsByActionIdAndStatus(actionPositionDTO.getNextId(), Status.COMPLETED)) {
+                throw new UnableToMoveExeption("Unable to move because it is in the block of completed tasks!");
+            }
+
+        }
+    }
+
+    //Our Action has the Now_Working status
+    private void setNowWorkingToNextAction(Action action) {
+
+        Goal goal = action.getGoal();
+        int index = goal.getActions().indexOf(action);
+
+        if(index == -1) throw new NoSuchElementException("No such action in the goal!");
+
+        Action nextAction = goal.getActions().get(index + 1);
+
+        action.setStatus(Status.NOT_COMPLETED);
+        nextAction.setStatus(Status.NOW_WORKING);
+        goal.setNowWorkingAction(nextAction);
+
+        goalRepo.save(goal);
+
+    }
+
+    //Changes the now working action for goal
+    private void setNowWorkingToMoving(Action moving, Action next) {
+
+        Goal goal = moving.getGoal();
+        moving.setStatus(Status.NOW_WORKING);
+        next.setStatus(Status.NOT_COMPLETED);
+        goal.setNowWorkingAction(moving);
+
+        goalRepo.save(goal);
+    }
+
 }

@@ -2,7 +2,9 @@ package ers.roadmap.controller;
 
 import ers.roadmap.DTO.mappers.RoadmapMapper;
 import ers.roadmap.DTO.patch.PatchActionDTO;
+import ers.roadmap.DTO.patch.PatchPositionDTO;
 import ers.roadmap.exceptions.ConstraintsNotMetException;
+import ers.roadmap.exceptions.UnableToMoveExeption;
 import ers.roadmap.model.Action;
 import ers.roadmap.model.CustomMessage;
 import ers.roadmap.model.Goal;
@@ -56,6 +58,20 @@ public class ActionController {
 
         return new ResponseEntity<>(HttpStatus.OK);
 
+    }
+
+    @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(authentication.name, #actionId)")
+    @PatchMapping("/move/{id}")
+    public ResponseEntity<?> moveActionPlace(@RequestBody PatchPositionDTO actionPositionDTO, @PathVariable("id") Long actionId) {
+
+        try {
+            actionService.validateToMove(actionId, actionPositionDTO);
+        }catch (UnableToMoveExeption | NoSuchElementException e) {
+            return new ResponseEntity<>(new CustomMessage(e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+
+        actionService.move(actionId, actionPositionDTO);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(authentication.name, #actionId)")

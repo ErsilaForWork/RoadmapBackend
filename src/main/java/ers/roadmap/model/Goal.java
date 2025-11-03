@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import ers.roadmap.model.enums.Status;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.core.annotation.Order;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,9 +61,11 @@ public class Goal {
     private Roadmap roadmap;
 
     @OneToMany(mappedBy = "goal", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("actionId ASC")
+    @OrderBy("position ASC")
     @JsonManagedReference
     private List<Action> actions;
+
+    private Long position;
 
     @PrePersist
     @PreUpdate
@@ -100,7 +101,8 @@ public class Goal {
     }
 
     public void setNowWorkingAction(Action nowWorkingAction) {
-        nowWorkingAction.setStatus(Status.NOW_WORKING);
+        if(nowWorkingAction != null)
+            nowWorkingAction.setStatus(Status.NOW_WORKING);
         this.nowWorkingAction = nowWorkingAction;
     }
 
@@ -138,6 +140,14 @@ public class Goal {
 
     public Roadmap getRoadmap() {
         return roadmap;
+    }
+
+    public Long getPosition() {
+        return position;
+    }
+
+    public void setPosition(Long position) {
+        this.position = position;
     }
 
     public void setRoadmap(Roadmap roadmap) {

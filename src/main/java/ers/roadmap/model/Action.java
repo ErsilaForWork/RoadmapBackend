@@ -40,6 +40,8 @@ public class Action {
     @JsonBackReference
     private Goal goal;
 
+    private Long position;
+
     @Override
     public boolean equals(Object o) {
 
@@ -97,5 +99,13 @@ public class Action {
 
     public void setGoal(Goal goal) {
         this.goal = goal;
+    }
+
+    public Long getPosition() {
+        return position;
+    }
+
+    public void setPosition(Long position) {
+        this.position = position;
     }
 }

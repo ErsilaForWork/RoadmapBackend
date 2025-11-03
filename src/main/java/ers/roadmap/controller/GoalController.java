@@ -1,7 +1,9 @@
 package ers.roadmap.controller;
 
+import ers.roadmap.DTO.patch.PatchPositionDTO;
 import ers.roadmap.DTO.patch.PatchGoalDTO;
 import ers.roadmap.exceptions.ConstraintsNotMetException;
+import ers.roadmap.exceptions.UnableToMoveExeption;
 import ers.roadmap.model.CustomMessage;
 import ers.roadmap.service.GoalService;
 import jakarta.validation.Valid;
@@ -10,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.NoSuchElementException;
 
 
 @RestController
@@ -20,6 +24,20 @@ public class GoalController {
 
     public GoalController(GoalService goalService) {
         this.goalService = goalService;
+    }
+
+    @PreAuthorize("hasRole('ROLE_ADMIN') or @goalService.isOwner(authentication.name, #goalId)")
+    @PatchMapping("/move/{id}")
+    public ResponseEntity<?> moveGoalPlace(@RequestBody PatchPositionDTO goalPositionDTO, @PathVariable("id") Long goalId) {
+
+        try {
+            goalService.validateToMove(goalId, goalPositionDTO);
+        }catch (UnableToMoveExeption | NoSuchElementException e) {
+            return new ResponseEntity<>(new CustomMessage(e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+
+        goalService.move(goalId, goalPositionDTO);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN') or @goalService.isOwner(authentication.name, #goalId)")
