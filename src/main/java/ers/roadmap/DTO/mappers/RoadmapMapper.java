@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class RoadmapMapper {
 
-    public static final Long POSITION_STEP = 1L;
+    public static final Long POSITION_STEP = 1000L;
 
     public Roadmap toRoadmap(RoadmapInput roadmapDTO) {
 
