@@ -71,6 +71,9 @@ public class Goal {
     @PreUpdate
     private void validate() {
 
+        if(this.status == Status.COMPLETED)
+            completedPercent = 100;
+
         if(completedPercent < 0)
             completedPercent = 0;
         if(completedPercent > 100)
@@ -188,6 +191,15 @@ public class Goal {
 
     public Action findFirstAction() {
         return actions.getFirst();
+    }
+
+    public Action findFirstNotCompletedAction() {
+
+        for (Action action : actions) {
+            if(action.getStatus() == Status.NOT_COMPLETED) return action;
+        }
+
+        return null;
     }
 
     @Override

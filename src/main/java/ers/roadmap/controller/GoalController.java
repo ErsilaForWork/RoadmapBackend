@@ -27,6 +27,18 @@ public class GoalController {
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN') or @goalService.isOwner(authentication.name, #goalId)")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteGoal(@PathVariable("id") Long goalId) {
+        try {
+            goalService.delete(goalId);
+        }catch (Exception e) {
+            return new ResponseEntity<>(new CustomMessage(e.getMessage()) , HttpStatus.BAD_REQUEST);
+        }
+
+        return ResponseEntity.ok(new CustomMessage("Successfully deleted!"));
+    }
+
+    @PreAuthorize("hasRole('ROLE_ADMIN') or @goalService.isOwner(authentication.name, #goalId)")
     @PatchMapping("/move/{id}")
     public ResponseEntity<?> moveGoalPlace(@RequestBody PatchPositionDTO goalPositionDTO, @PathVariable("id") Long goalId) {
 

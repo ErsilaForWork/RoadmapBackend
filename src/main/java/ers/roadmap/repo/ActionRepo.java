@@ -38,4 +38,7 @@ public interface ActionRepo extends JpaRepository<Action, Long> {
         """, nativeQuery = true)
     void reindexActionsByGoal(@Param("goalId") Long goalId, @Param("step") Long step);
 
+    void removeActionByActionId(Long actionId);
+
+    void removeByActionId(Long actionId);
 }

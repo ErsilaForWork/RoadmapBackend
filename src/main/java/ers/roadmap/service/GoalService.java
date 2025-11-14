@@ -13,6 +13,9 @@ import ers.roadmap.model.enums.Status;
 import ers.roadmap.repo.GoalRepo;
 import ers.roadmap.repo.RoadmapRepo;
 import jakarta.transaction.Transactional;
+import jakarta.validation.ValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +33,7 @@ public class GoalService {
     private final Validator validator;
     private final PatchGoalMapper goalMapper;
     private final RoadmapRepo roadmapRepo;
-
+    private static final Logger logger = LoggerFactory.getLogger(GoalService.class);
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -63,6 +66,10 @@ public class GoalService {
             roadmapService.setCalculatedPercent(roadmap);
         }
         goal.setCompletedPercent(percent);
+    }
+
+    public void deleteGoal(Goal goal) {
+        
     }
 
     private int calculatePercent(Goal goal) {
@@ -270,5 +277,48 @@ public class GoalService {
             }
         }
         return null;
+    }
+
+
+    @Transactional
+    public void delete(Long goalId) {
+
+        Goal goal = goalRepo.findGoalWithActionsByGoalId(goalId)
+                .orElseThrow(() -> new NoSuchElementException("No such goal with that id!"));
+
+        if(goal.getStatus() == Status.COMPLETED) throw new ValidationException("Cant delete the completed goal!");
+
+        Roadmap roadmap = roadmapRepo.findRoadmapWithGoalsById(goal.getRoadmap().getRoadmapId())
+                .orElseThrow(() -> new NoSuchElementException("No such roadmap with that id!"));
+
+        // --- ваша логика смены статусов ---
+        if(goal.getStatus() == Status.NOW_WORKING) {
+
+            // если это "последняя" цель в роадмапе
+            if(roadmap.findLastGoal().equals(goal)) {
+                roadmap.setStatus(Status.COMPLETED);
+                roadmap.setNowWorkingGoal(null);
+            } else {
+                // если не последний — переключаем на следующий
+                int id = roadmap.getGoals().indexOf(goal);
+                Goal nextGoal = roadmap.getGoals().get(id + 1);
+                nextGoal.setStatus(Status.NOW_WORKING);
+                if(nextGoal.getNowWorkingAction() == null) {
+                    nextGoal.setNowWorkingAction(nextGoal.findFirstNotCompletedAction());
+                }
+                roadmap.setNowWorkingGoal(nextGoal);
+            }
+        }
+
+        if (roadmap.getNowWorkingGoal() != null && roadmap.getNowWorkingGoal().equals(goal)) {
+            roadmap.setNowWorkingGoal(null);
+        }
+
+        if (goal.getNowWorkingAction() != null) {
+            goal.setNowWorkingAction(null);
+        }
+
+        roadmap.removeGoal(goal);
+        roadmapRepo.save(roadmap);
     }
 }

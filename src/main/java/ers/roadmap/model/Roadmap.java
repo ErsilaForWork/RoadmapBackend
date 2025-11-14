@@ -72,6 +72,9 @@ public class Roadmap {
     @PreUpdate
     private void validate() {
 
+        if(this.status == Status.COMPLETED)
+            completedPercent = 100;
+
         if(completedPercent < 0)
             completedPercent = 0;
         if(completedPercent > 100)
@@ -117,7 +120,8 @@ public class Roadmap {
     }
 
     public void setNowWorkingGoal(Goal nowWorkingGoal) {
-        nowWorkingGoal.setStatus(Status.NOW_WORKING);
+        if(nowWorkingGoal != null)
+            nowWorkingGoal.setStatus(Status.NOW_WORKING);
         this.nowWorkingGoal = nowWorkingGoal;
     }
 
@@ -125,6 +129,7 @@ public class Roadmap {
         if (goal == null || this.goals == null) return;
         if (this.goals.remove(goal)) {
             if (goal.getRoadmap() == this) {
+                goal.setNowWorkingAction(null);
                 goal.setRoadmap(null);
             }
         }

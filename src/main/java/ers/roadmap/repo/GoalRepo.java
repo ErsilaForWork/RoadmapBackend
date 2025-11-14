@@ -13,6 +13,10 @@ import java.util.Optional;
 @Repository
 public interface GoalRepo extends JpaRepository<Goal, Long> {
 
+    @Query("select g from Goal g where g.goalId = :goalId")
+    @EntityGraph("goal_with_actions")
+    Optional<Goal> findGoalWithActionsByGoalId(@Param("goalId") Long goalId);
+
     @Query("select g from Goal g where g.goalId = (select a.goal.goalId from Action a where a.actionId = :actionId)")
     @EntityGraph("goal_with_actions")
     Optional<Goal> findGoalWithActionsByActionIdGraph(@Param("actionId") Long actionId);

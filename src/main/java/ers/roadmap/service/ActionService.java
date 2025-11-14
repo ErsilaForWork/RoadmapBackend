@@ -12,6 +12,7 @@ import ers.roadmap.model.Roadmap;
 import ers.roadmap.model.enums.Status;
 import ers.roadmap.repo.ActionRepo;
 import ers.roadmap.repo.GoalRepo;
+import ers.roadmap.repo.RoadmapRepo;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -31,14 +32,16 @@ public class ActionService {
     private final PatchActionMapper actionMapper;
     private final GoalRepo goalRepo;
     private final EntityManager entityManager;
+    private final RoadmapRepo roadmapRepo;
 
-    public ActionService(ActionRepo actionRepo, Validator validator, GoalService goalService, PatchActionMapper actionMapper, GoalRepo goalRepo, EntityManager entityManager) {
+    public ActionService(ActionRepo actionRepo, Validator validator, GoalService goalService, PatchActionMapper actionMapper, GoalRepo goalRepo, EntityManager entityManager, RoadmapRepo roadmapRepo) {
         this.actionRepo = actionRepo;
         this.validator = validator;
         this.goalService = goalService;
         this.actionMapper = actionMapper;
         this.goalRepo = goalRepo;
         this.entityManager = entityManager;
+        this.roadmapRepo = roadmapRepo;
     }
 
     public Action validateToComplete(Long actionId) throws NoSuchElementException, ValidationException {
@@ -249,6 +252,60 @@ public class ActionService {
         goal.setNowWorkingAction(moving);
 
         goalRepo.save(goal);
+    }
+
+
+    @Transactional
+    public void delete(Long actionId) {
+        // загрузим action и goal в одном графе (чтобы они были managed)
+        Action action = actionRepo.findWithGoalAndRoadmap(actionId)
+                .orElseThrow(() -> new NoSuchElementException("No such action with that id!"));
+
+        if(action.getStatus() == Status.COMPLETED)
+            throw new ValidationException("Cant delete completed action!");
+
+        Goal goal = goalRepo.findGoalWithActionsByActionIdGraph(actionId)
+                .orElseThrow(() -> new NoSuchElementException("No such goal for action!"));
+
+        // --- ваша логика смены статусов ---
+        if(action.getStatus() == Status.NOW_WORKING) {
+            // если это "последнее" действие в цели — обновляем goal/roadmap как у вас
+            if(goal.findLastAction().equals(action)) {
+                goal.setStatus(Status.COMPLETED);
+                Roadmap roadmap = roadmapRepo.findRoadmapWithGoalsById(goal.getRoadmap().getRoadmapId()).get();
+                int id = roadmap.getGoals().indexOf(goal);
+                if(id == roadmap.getGoals().size() - 1) {
+                    roadmap.setStatus(Status.COMPLETED);
+                } else {
+                    Goal nextGoal = goalRepo.findGoalWithActionsByGoalId(roadmap.getGoals().get(id + 1).getGoalId()).get();
+                    nextGoal.setStatus(Status.NOW_WORKING);
+                    if(nextGoal.getNowWorkingAction() == null) {
+                        nextGoal.setNowWorkingAction(nextGoal.findFirstNotCompletedAction());
+                    }
+                    roadmap.setNowWorkingGoal(nextGoal);
+                    roadmapRepo.save(roadmap); // сохраняем roadmap и связанные изменения
+                }
+            } else {
+                // если не последний — переключаем на следующее действие и сохраняем goal
+                int id = goal.getActions().indexOf(action);
+                Action nextAction = goal.getActions().get(id + 1);
+                nextAction.setStatus(Status.NOW_WORKING);
+                goal.setNowWorkingAction(nextAction);
+                // сохранение goal ниже (после отвязки action)
+            }
+        }
+
+        // --- ВАЖНО: отвязываем action от goal и удаляем через коллекцию родителя ---
+        // Если goal.nowWorkingAction указывает на action — обнуляем
+        if (goal.getNowWorkingAction() != null && goal.getNowWorkingAction().equals(action)) {
+            goal.setNowWorkingAction(null);
+        }
+
+        // Удаляем action из коллекции goals (Goal.removeAction у вас уже ставит action.setGoal(null))
+        goal.removeAction(action); // ваша реализация removeAction делает action.setGoal(null)
+        // Сохраняем goal — orphanRemoval = true удалит action из БД
+        goalRepo.save(goal);
+        // commit транзакции -> JPA выполнит необходимые SQL: обновление goals.working_id (NULL) и DELETE action
     }
 
 }

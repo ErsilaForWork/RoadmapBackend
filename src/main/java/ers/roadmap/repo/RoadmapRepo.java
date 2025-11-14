@@ -26,5 +26,9 @@ public interface RoadmapRepo extends JpaRepository<Roadmap, Long> {
     @EntityGraph("roadmap_with_owner")
     Optional<Roadmap> findRoadmapById(@Param("id") Long roadmapId);
 
+    @Query("select r from Roadmap r where r.roadmapId = :id")
+    @EntityGraph("roadmap_with_goals")
+    Optional<Roadmap> findRoadmapWithGoalsById(@Param("id") Long roadmapId);
+
     Roadmap getRoadmapByRoadmapId(Long roadmapId);
 }
