@@ -9,9 +9,11 @@ import ers.roadmap.model.Action;
 import ers.roadmap.model.CustomMessage;
 import ers.roadmap.model.Goal;
 import ers.roadmap.model.Roadmap;
+import ers.roadmap.security.service.AppUserService;
 import ers.roadmap.service.ActionService;
 import ers.roadmap.service.GoalService;
 import ers.roadmap.service.RoadmapService;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import org.slf4j.Logger;
@@ -34,12 +36,14 @@ public class ActionController {
     private final ActionService actionService;
     private final RoadmapService roadmapService;
     private final RoadmapMapper roadmapMapper;
+    private final AppUserService userService;
 
-    public ActionController(GoalService goalService, ActionService actionService, RoadmapService roadmapService, RoadmapMapper roadmapMapper) {
+    public ActionController(GoalService goalService, ActionService actionService, RoadmapService roadmapService, RoadmapMapper roadmapMapper, AppUserService userService) {
         this.goalService = goalService;
         this.actionService = actionService;
         this.roadmapService = roadmapService;
         this.roadmapMapper = roadmapMapper;
+        this.userService = userService;
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(@authentication.name, #actionId)")
@@ -91,6 +95,7 @@ public class ActionController {
 
     @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(authentication.name, #actionId)")
     @PutMapping("/complete/{id}")
+    @Transactional
     public ResponseEntity<?> complete(@PathVariable("id") Long actionId) {
 
         System.out.println("Action complete start ---------------------------------------------");
@@ -118,6 +123,8 @@ public class ActionController {
 
         System.out.println("Action complete end ---------------------------------------------");
         roadmapService.save(roadmap);
+        userService.incrementStreak(roadmap.getOwner());
+
         return new ResponseEntity<>(roadmapMapper.toDTO(roadmap), HttpStatus.OK);
     }
 

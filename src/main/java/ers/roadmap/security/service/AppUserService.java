@@ -13,7 +13,6 @@ import ers.roadmap.security.model.AppUser;
 import ers.roadmap.security.model.EnumAppRole;
 import ers.roadmap.security.repo.AppRoleRepo;
 import ers.roadmap.security.repo.AppUserRepo;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
@@ -23,8 +22,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
@@ -120,6 +121,39 @@ public class AppUserService {
 
     public List<AppUser> getAllSimpleRepo() {
         return userRepo.findAll();
+    }
+
+    public void setStreakBroken(String username) throws UsernameNotFoundException {
+        AppUser user = userRepo.findAppUserByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("No such username!"));
+
+
+        if(user.getLastActivityDate().isBefore(LocalDate.now().minusDays(1)) && user.getStreak() > 1) {
+            user.setStreakBroken(true);
+        }
+
+        user.setLastLoginDate(LocalDate.now());
+        userRepo.save(user);
+    }
+
+    public void incrementStreak(AppUser user) {
+
+        LocalDate lastActivity = user.getLastActivityDate();
+        LocalDate now = LocalDate.now();
+
+        //If last activity date is today
+        if(lastActivity.equals(now)) return;
+
+        //If last activity date is yesterday
+        if(lastActivity.equals(now.minusDays(1)) && !user.isStreakBroken()) {
+            user.setStreak(user.getStreak() + 1);
+        }else {
+            user.setStreakBroken(false);
+            user.setStreak(1);
+        }
+
+        user.setLastActivityDate(now);
+        userRepo.save(user);
     }
 
     public String verifyUserAndGetJwt(VerifyUserDTO input) throws VerifyEmailException {

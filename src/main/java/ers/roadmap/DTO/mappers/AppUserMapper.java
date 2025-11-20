@@ -26,7 +26,9 @@ public class AppUserMapper {
                 user.getRoadmaps().stream()
                         .map(r -> (Pair<Long, String>) new Pair(r.getRoadmapId(), r.getTitle()))
                         .map(pairMapper::toDTO)
-                        .toList()
+                        .toList(),
+                user.getStreak(),
+                user.isStreakBroken()
         );
     }
 

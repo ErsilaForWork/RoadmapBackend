@@ -126,8 +126,10 @@ public class SecurityController {
 
         try{
             String jwt = userService.loginJwt(loginForm);
-
             System.out.println("User " + loginForm.getUsername() + " logged in");
+
+            userService.setStreakBroken(loginForm.getUsername());
+
             return userService.setJwtToCookie(jwt);
 
         }catch (LoginFormException e) {

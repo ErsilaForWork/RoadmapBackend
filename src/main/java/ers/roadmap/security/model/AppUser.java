@@ -3,9 +3,10 @@ package ers.roadmap.security.model;
 import ers.roadmap.DTO.RegistrationForm;
 import ers.roadmap.model.Roadmap;
 import jakarta.persistence.*;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import org.hibernate.annotations.CreationTimestamp;
-import org.springframework.boot.context.properties.bind.DefaultValue;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,13 +58,30 @@ public class AppUser {
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "owner")
     private List<Roadmap> roadmaps;
 
+    @Column(name = "last_activity_date")
+    private LocalDate lastActivityDate;
+
+    @Column(name = "streak")
+    private Integer streak;
+
+    @Column(name = "streak_broken")
+    private boolean streakBroken;
+
+    @Column(name = "last_login_date")
+    private LocalDate lastLoginDate;
+
     private String verificationCode;
 
     private LocalDateTime verificationCodeExpires;
 
     private boolean enabled;
 
-    public AppUser() {}
+    public AppUser() {
+        lastActivityDate = LocalDate.now();
+        streak = 1;
+        streakBroken = false;
+        lastLoginDate = LocalDate.now();
+    }
 
     public AppUser(String username, String email, String password, AppRole role) {
         this.username = username;
@@ -71,6 +89,10 @@ public class AppUser {
         this.password = password;
         this.role = role;
         roadmaps = new ArrayList<>();
+        lastActivityDate = LocalDate.now();
+        streak = 1;
+        streakBroken = false;
+        lastLoginDate = LocalDate.now();
     }
 
     public AppUser(String username, String email, String password, AppRole role, boolean enabled) {
@@ -80,6 +102,10 @@ public class AppUser {
         this.role = role;
         this.enabled = enabled;
         roadmaps = new ArrayList<>();
+        lastActivityDate = LocalDate.now();
+        streak = 1;
+        streakBroken = false;
+        lastLoginDate = LocalDate.now();
     }
 
     public AppUser(RegistrationForm registrationForm, AppRole role) {
@@ -88,6 +114,10 @@ public class AppUser {
         this.password = registrationForm.getPassword();
         this.role = role;
         roadmaps = new ArrayList<>();
+        lastActivityDate = LocalDate.now();
+        streak = 1;
+        streakBroken = false;
+        lastLoginDate = LocalDate.now();
     }
 
     @Override
@@ -204,6 +234,38 @@ public class AppUser {
 
     public LocalDateTime getVerificationCodeExpires() {
         return verificationCodeExpires;
+    }
+
+    public LocalDate getLastActivityDate() {
+        return lastActivityDate;
+    }
+
+    public void setLastActivityDate(LocalDate lastActivityDate) {
+        this.lastActivityDate = lastActivityDate;
+    }
+
+    public Integer getStreak() {
+        return streak;
+    }
+
+    public void setStreak(Integer streak) {
+        this.streak = streak;
+    }
+
+    public boolean isStreakBroken() {
+        return streakBroken;
+    }
+
+    public void setStreakBroken(boolean streakBroken) {
+        this.streakBroken = streakBroken;
+    }
+
+    public LocalDate getLastLoginDate() {
+        return lastLoginDate;
+    }
+
+    public void setLastLoginDate(LocalDate lastLoginDate) {
+        this.lastLoginDate = lastLoginDate;
     }
 
     public void setVerificationCodeExpires(LocalDateTime verificationCodeExpires) {
