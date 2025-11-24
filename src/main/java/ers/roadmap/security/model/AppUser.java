@@ -41,8 +41,6 @@ public class AppUser {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "phone_number", unique = true)
-    private String phoneNumber;
 
     @Column(nullable = false)
     private String password;
@@ -208,13 +206,6 @@ public class AppUser {
         this.email = email;
     }
 
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
 
     public String getPassword() {
         return password;
