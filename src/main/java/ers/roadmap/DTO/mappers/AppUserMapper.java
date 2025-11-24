@@ -20,7 +20,6 @@ public class AppUserMapper {
                 user.getUserId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getPhoneNumber(),
                 user.getCreationTime(),
                 user.getRole(),
                 user.getRoadmaps().stream()
