@@ -1,0 +1,34 @@
+version: '3.8'
+
+volumes:
+  pg_roadmap_app_demo:
+
+services:
+  roadmap_db:
+    image: postgres:17
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=roadmap
+    volumes:
+      - pg_roadmap_app_demo:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d roadmap" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8.4.0
+
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - roadmap_db
+    env_file:
+      - .env
+    restart: unless-stopped

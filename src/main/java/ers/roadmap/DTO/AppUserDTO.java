@@ -6,5 +6,5 @@ import ers.roadmap.security.model.AppRole;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record AppUserDTO(Long userId, String username, String email, LocalDateTime creationTime, AppRole role, List<RoadmapPairDTO> roadmaps, Integer streak, Boolean streakBroken) {
+public record AppUserDTO(Long userId, String username, String email, LocalDateTime creationTime, AppRoleDTO role, List<RoadmapPairDTO> roadmaps, Integer streak, Boolean streakBroken) {
 }

@@ -16,8 +16,6 @@ import ers.roadmap.service.RoadmapService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,7 +29,6 @@ import java.util.NoSuchElementException;
 @RequestMapping("/action")
 public class ActionController {
 
-    private static final Logger log = LoggerFactory.getLogger(ActionController.class);
     private final GoalService goalService;
     private final ActionService actionService;
     private final RoadmapService roadmapService;
@@ -46,7 +43,7 @@ public class ActionController {
         this.userService = userService;
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(@authentication.name, #actionId)")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or @actionService.isOwner(authentication.name, #actionId)")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteAction(@PathVariable("id") Long actionId) {
 

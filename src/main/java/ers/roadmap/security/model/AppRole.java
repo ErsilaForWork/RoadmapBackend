@@ -1,7 +1,6 @@
 package ers.roadmap.security.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import ers.roadmap.security.repo.AppRoleRepo;
 import jakarta.persistence.*;
 
 import java.util.HashSet;
@@ -42,9 +41,10 @@ public class AppRole {
 
         if(role == EnumAppRole.ROLE_USER) {
             return "ROLE_USER";
-        } else  {
+        } else if(role == EnumAppRole.ROLE_ADMIN)  {
             return "ROLE_ADMIN";
         }
+        return "No such role!";
 
     }
 

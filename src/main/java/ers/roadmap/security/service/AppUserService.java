@@ -8,11 +8,11 @@ import ers.roadmap.exceptions.LoginFormException;
 import ers.roadmap.exceptions.VerifyEmailException;
 import ers.roadmap.jwt.JwtUtils;
 import ers.roadmap.model.CustomMessage;
-import ers.roadmap.security.model.AppRole;
 import ers.roadmap.security.model.AppUser;
 import ers.roadmap.security.model.EnumAppRole;
 import ers.roadmap.security.repo.AppRoleRepo;
 import ers.roadmap.security.repo.AppUserRepo;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
@@ -35,8 +34,6 @@ public class AppUserService {
     private final AppUserRepo userRepo;
     private final AppRoleRepo roleRepo;
     private final PasswordEncoder encoder;
-    private final AppRole ROLE_USER;
-    private final AppRole ROLE_ADMIN;
     private final JwtUtils jwtUtils;
     private final int jwtExpiryMillis;
 
@@ -44,8 +41,6 @@ public class AppUserService {
         this.userRepo = userRepo;
         this.roleRepo = roleRepo;
         this.encoder = encoder;
-        ROLE_USER = roleRepo.getAppRoleByRole(EnumAppRole.ROLE_USER);
-        ROLE_ADMIN = roleRepo.getAppRoleByRole(EnumAppRole.ROLE_ADMIN);
         this.jwtUtils = jwtUtils;
         this.jwtExpiryMillis = jwtExpriyMillis;
     }
@@ -62,7 +57,7 @@ public class AppUserService {
 
     public AppUser createUser(RegistrationForm registrationForm) {
 
-        AppUser user = new AppUser(registrationForm, ROLE_USER);
+        AppUser user = new AppUser(registrationForm, roleRepo.getAppRoleByRole(EnumAppRole.ROLE_USER));
         user.setPassword(encoder.encode(user.getPassword()));
         user.setVerificationCode(generateVerificationCode());
         user.setVerificationCodeExpires(LocalDateTime.now().plusMinutes(15));
@@ -156,6 +151,7 @@ public class AppUserService {
         userRepo.save(user);
     }
 
+    @Transactional
     public String verifyUserAndGetJwt(VerifyUserDTO input) throws VerifyEmailException {
 
         Optional<AppUser> userOptional = userRepo.findByEmail(input.getEmail());
@@ -176,6 +172,7 @@ public class AppUserService {
                 user.setVerificationCode(null);
                 user.setVerificationCodeExpires(null);
 
+                System.out.println(user.getRole());
                 userRepo.save(user);
 
                 return jwtUtils.generateTokenFromUsername(user.getUsername());

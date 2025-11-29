@@ -28,6 +28,12 @@ import java.util.Objects;
                 @NamedAttributeNode("role")
         }
 )
+@NamedEntityGraph(
+        name = "user_with_role",
+        attributeNodes = {
+                @NamedAttributeNode("role")
+        }
+)
 public class AppUser {
 
     @Id
@@ -49,7 +55,7 @@ public class AppUser {
     @Column(name = "creation_time", updatable = false)
     private LocalDateTime creationTime;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", referencedColumnName = "role_id")
     private AppRole role;
 

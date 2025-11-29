@@ -63,7 +63,7 @@ public class Roadmap {
     @OrderBy("position ASC")
     private List<Goal> goals;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne
     @JoinColumn(name = "owner_id", referencedColumnName = "user_id")
     @JsonIgnoreProperties({"password","email","roadmaps","creationTime","role","phoneNumber"})
     private AppUser owner;

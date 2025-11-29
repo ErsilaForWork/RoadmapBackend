@@ -11,6 +11,11 @@ import org.springframework.stereotype.Component;
 public class RoadmapMapper {
 
     public static final Long POSITION_STEP = 1000L;
+    private final AppRoleMapper roleMapper;
+
+    public RoadmapMapper(AppRoleMapper roleMapper) {
+        this.roleMapper = roleMapper;
+    }
 
     public Roadmap toRoadmap(RoadmapInput roadmapDTO) {
 
@@ -56,8 +61,10 @@ public class RoadmapMapper {
         roadmapDTO.setCompletedPercent(roadmap.getCompletedPercent());
         roadmapDTO.setTitle(roadmap.getTitle());
         roadmapDTO.setStatus(roadmap.getStatus());
-        roadmapDTO.setOwner(new AppUserDTOForRoadmap(roadmap.getOwner().getUserId(), roadmap.getOwner().getUsername(), roadmap.getOwner().getRole()));
+        roadmapDTO.setOwner(new AppUserDTOForRoadmap(roadmap.getOwner().getUserId(), roadmap.getOwner().getUsername(), roleMapper.toDTO(roadmap.getOwner().getRole())));
+        System.out.println("Normal after getting a role");
         roadmapDTO.setGoals(roadmap.getGoals().stream().map(GoalMapper::toDTO).toList());
+        System.out.println("Returning a DTO");
         return roadmapDTO;
     }
 

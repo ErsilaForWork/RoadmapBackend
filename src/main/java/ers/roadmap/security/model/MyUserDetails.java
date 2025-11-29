@@ -16,10 +16,14 @@ public class MyUserDetails implements UserDetails {
     public MyUserDetails(String username, String password, AppRole role) {
         this.username = username;
         this.password = password;
+        if(role==null) {
+            System.out.println("ROLE IS NULL FOR : " + username);
+        }
         this.authorities = List.of(new SimpleGrantedAuthority(role.toString()));
     }
 
     public static MyUserDetails build(AppUser user) {
+        System.out.println("Role of " + user.getUsername() + " is " + user.getRole() + "!");
         return new MyUserDetails(user.getUsername(), user.getPassword(), user.getRole());
     }
 

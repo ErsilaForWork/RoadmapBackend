@@ -1,6 +1,7 @@
 package ers.roadmap.security.repo;
 
 import ers.roadmap.security.model.AppUser;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface AppUserRepo extends JpaRepository<AppUser, Long> {
+    @EntityGraph("user_with_role")
     Optional<AppUser> findAppUserByUsername(String username);
 
     @Query("select u from AppUser u where u.username = :username")
@@ -26,5 +28,6 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
     @EntityGraph(attributePaths = {"roadmaps", "role"})
     List<AppUser> getAllWithRoadmap();
 
+    @EntityGraph("user_with_role")
     Optional<AppUser> findByEmail(String email);
 }

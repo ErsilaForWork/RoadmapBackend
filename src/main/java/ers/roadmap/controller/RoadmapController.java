@@ -38,7 +38,7 @@ public class RoadmapController {
 
 
     @PostMapping("/roadmap")
-    public ResponseEntity<?> createRoadmap(@Valid @RequestBody RoadmapInput roadmapDTO, BindingResult br, @AuthenticationPrincipal UserDetails userDetails ) {
+    public ResponseEntity<?> createRoadmap(@Valid @RequestBody RoadmapInput roadmapDTO, BindingResult br, @AuthenticationPrincipal UserDetails userDetails) {
 
 
         if (userDetails == null) {
@@ -57,9 +57,7 @@ public class RoadmapController {
             return new ResponseEntity<>(new CustomMessage("No such user!"), HttpStatus.BAD_REQUEST);
         }
 
-        Roadmap roadmap = roadmapService.mapWithOwner(roadmapDTO, owner);
-        return new ResponseEntity<>(roadmapMapper.toDTO(roadmapService.save(roadmap)), HttpStatus.OK);
-
+        return new ResponseEntity<>(roadmapService.createProduct(roadmapDTO, owner), HttpStatus.OK);
     }
 
     @GetMapping("/user/roadmaps")
@@ -82,6 +80,16 @@ public class RoadmapController {
         return roadmapService.getAllEficient();
     }
 
+    @GetMapping("/roadmap/{id}")
+    public ResponseEntity<?> getRoadmapById(@PathVariable("id") Long roadmapId) {
+        try{
+            RoadmapDTO roadmapDTO = roadmapService.getById(roadmapId);
+            return ResponseEntity.ok(roadmapDTO);
+        }catch (NoSuchElementException e) {
+            return new ResponseEntity<>(new CustomMessage("No such roadmap id!"),HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PreAuthorize("hasRole('ROLE_ADMIN') or @roadmapService.isOwner(authentication.name, #id)")
     @DeleteMapping("/roadmap/{id}")
     public ResponseEntity<?> deleteRoadmap(@PathVariable("id") Long id) {
@@ -97,12 +105,13 @@ public class RoadmapController {
             return new ResponseEntity<>(new CustomMessage("Bad title"), HttpStatus.BAD_REQUEST);
         }
 
+        RoadmapDTO roadmapDTO;
         try{
-            roadmapService.partialUpdate(roadmapId, patchDTO);
+            roadmapDTO = roadmapService.partialUpdate(roadmapId, patchDTO);
         }catch (ConstraintsNotMetException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>(roadmapDTO, HttpStatus.OK);
     }
 
 }

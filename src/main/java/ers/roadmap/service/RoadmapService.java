@@ -6,18 +6,21 @@ import ers.roadmap.DTO.mappers.RoadmapMapper;
 import ers.roadmap.DTO.patch.PatchRoadmapDTO;
 import ers.roadmap.DTO.patch.mapper.PatchRoadmapMapper;
 import ers.roadmap.exceptions.ConstraintsNotMetException;
-import ers.roadmap.model.Goal;
 import ers.roadmap.model.Roadmap;
 import ers.roadmap.model.enums.Status;
 import ers.roadmap.repo.GoalRepo;
 import ers.roadmap.repo.RoadmapRepo;
 import ers.roadmap.security.model.AppUser;
-import jakarta.validation.Valid;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
@@ -147,23 +150,46 @@ public class RoadmapService {
 
     }
 
+    @CacheEvict(value = "ROADMAP_CACHE", key = "#id")
     public void deleteById(Long id) {
         roadmapRepo.deleteById(id);
     }
 
 
-    public void partialUpdate(Long roadmapId, @Valid PatchRoadmapDTO patchDTO) throws ConstraintsNotMetException {
+    @CachePut(value = "ROADMAP_CACHE", key = "#roadmapId")
+    public RoadmapDTO partialUpdate(Long roadmapId, PatchRoadmapDTO patchDTO) throws ConstraintsNotMetException {
 
         Roadmap roadmap = roadmapRepo.getRoadmapByRoadmapId(roadmapId);
 
         roadmapPatchMapper.merge(roadmap, patchDTO);
 
+        Roadmap savedRoadmap;
         try {
-            roadmapRepo.save(roadmap);
+            savedRoadmap = roadmapRepo.save(roadmap);
         }catch (DataIntegrityViolationException e) {
             throw new ConstraintsNotMetException(e.getMessage());
         }
 
+        return roadmapMapper.toDTO(savedRoadmap);
     }
 
+    @CachePut(value = "ROADMAP_CACHE", key = "#result.id")
+    public RoadmapDTO createProduct(RoadmapInput roadmapDTO, AppUser owner) {
+        Roadmap savedRoadmap = roadmapRepo.save(mapWithOwner(roadmapDTO, owner));
+        return roadmapMapper.toDTO(savedRoadmap);
+    }
+
+    @Cacheable(value = "ROADMAP_CACHE", key = "#roadmapId")
+    public RoadmapDTO getById(Long roadmapId) throws NoSuchElementException {
+        Optional<Roadmap> optionalRoadmap = roadmapRepo.findRoadmapWithGoalsById(roadmapId);
+        if(optionalRoadmap.isEmpty()) throw new NoSuchElementException("No such roadmap id!");
+
+        System.out.println("Normal till 1");
+        Roadmap roadmap = optionalRoadmap.get();
+        System.out.println("Normal till 2");
+        roadmap.setGoals(goalRepo.findGoalsWithActionsUsingRoadmapId(roadmap.getRoadmapId()));
+        System.out.println("Normal till 3");
+        System.out.println(roadmap.getOwner().getRole());
+        return roadmapMapper.toDTO(roadmap);
+    }
 }

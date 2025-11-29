@@ -1,5 +1,5 @@
 package ers.roadmap.DTO.model.output;
 
-import ers.roadmap.security.model.AppRole;
+import ers.roadmap.DTO.AppRoleDTO;
 
-public record AppUserDTOForRoadmap (Long userId, String username, AppRole role) {}
+public record AppUserDTOForRoadmap (Long userId, String username, AppRoleDTO role) {}

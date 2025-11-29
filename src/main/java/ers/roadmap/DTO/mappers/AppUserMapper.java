@@ -10,9 +10,11 @@ import org.springframework.stereotype.Component;
 public class AppUserMapper {
 
     private final PairMapper pairMapper;
+    private final AppRoleMapper appRoleMapper;
 
-    public AppUserMapper(PairMapper pairMapper) {
+    public AppUserMapper(PairMapper pairMapper, AppRoleMapper appRoleMapper) {
         this.pairMapper = pairMapper;
+        this.appRoleMapper = appRoleMapper;
     }
 
     public AppUserDTO toDto(AppUser user) {
@@ -21,7 +23,7 @@ public class AppUserMapper {
                 user.getUsername(),
                 user.getEmail(),
                 user.getCreationTime(),
-                user.getRole(),
+                appRoleMapper.toDTO(user.getRole()),
                 user.getRoadmaps().stream()
                         .map(r -> (Pair<Long, String>) new Pair(r.getRoadmapId(), r.getTitle()))
                         .map(pairMapper::toDTO)
